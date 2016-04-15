@@ -1,10 +1,10 @@
 ﻿=== Event List ===
-Contributors: mibuthu
+Contributors: mibuthu, clhunsen
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=W54LNZMWF9KW2
 Tags: event, events, list, listview, calendar, schedule, shortcode, page, category, categories, filter, admin, attribute, widget, sidebar, feed, rss
 Requires at least: 3.3
-Tested up to: 3.8.1
-Stable tag: 0.6.4
+Tested up to: 4.5
+Stable tag: 0.7.6
 Plugin URI: http://wordpress.org/extend/plugins/event-list
 Licence: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -22,19 +22,28 @@ The purpose of this plugin is to to show a list of events with date, time, descr
 * Beginning and end dates for multi-day events
 * Wordpress's WYSIWYG editor for the event details. So you can include styled text, links, images and other media in your events.
 * A duplicate function for events to easier create similar event copies
+* Import multiple events via csv files
 * Event categories
 * Sync event categories with post categories
 * Filter events according to dates or categories
 * Include an event feed in your site
 
-The event list can be placed in any page or post on your Wordpress site. Just include the following short code where you want the events to appear:
+= Usage: =
+New events can be added in the WordPress admin area.
 
-‘[event-list]’
+To display the events on your site simply insert the shortcode `[event-list]` into a page or post.
+You can modify the listed events and their style with attributes. All available attributes can be found on the Event List -> About page in the Wordpress admin area.
 
-You can modify the listed events and their style with attributes. All available attributes can be found on the Event List -> About page.
-There is also a widget available to view the upcoming events in a sidebar with many options.
+Additionally there is also a widget available to show the upcoming events in your sidebar.
 
+= Development: =
 If you want to follow the development status have a look at the [git-repository on github](https://github.com/mibuthu/wp-event-list "wp-event-list git-repository").
+Feel free to add your merge requests there, if you want to help to improve the plugin.
+
+= Translations: =
+Please help translating this plugin into multiple languages.
+You can submit your translations at [transifex.com](https://www.transifex.com/projects/p/wp-event-list "wp-event-list at transifex").
+There the source strings will always be in sync with the actual development version.
 
 
 == Installation ==
@@ -53,7 +62,7 @@ Insert the shortcode [event-list] in your page or post. You can modify the outpu
 Event List uses the built-in Wordpress WYSIWYG editor. It's exactly the same process like in creating Posts or Pages.
 
 = Can I call the shortcode directly via php e.g. for my own template, theme or plugin? =
-Yes, you can create an instance of the "SC_Event_List" class which is located in the plugin folder under "includes/sc_event-list.php" and call the function show_html($atts).With $atts you can specify all the shortcode attributes you require.
+Yes, you can create an instance of the "SC_Event_List" class which is located in the plugin folder under "includes/sc_event-list.php" and call the function show_html($atts). With $atts you can specify all the shortcode attributes you require.
 Another possibility would be to call the wordpress function "do_shortcode()".
 
 
@@ -63,13 +72,111 @@ Another possibility would be to call the wordpress function "do_shortcode()".
 2. Admin page: New/edit event form
 3. Admin page: Categories
 4. Admin page: Settings (general tab)
-5. Admin page: Settings (feed tab)
-6. Admin page: About page with help and shortcode attributes list
-7. Admin page: Widget with the available options
-8. Example page created with [event-list] shortcode
+5. Admin page: Settings (admin page tab)
+6. Admin page: Settings (feed tab)
+7. Admin page: About page with help and shortcode attributes list
+8. Admin page: Widget with the available options
+9. Example page with [event-list] shortcode
+10. Example widget
 
 
 == Changelog ==
+
+= 0.7.6 (2015-12-13) =
+* added shortcode attribute "collapse_details"
+* correct handling of "more"-tag in event details
+* show "url_to_page" shortcode attribute in the documentation
+* fixed wrong date format in events import sample
+* some help texts improvements
+* updated translation de_DE (78%) and fi_FI (35%)
+* added italian translation it_IT (69%)
+* added portuguese translation pt_BR (58%)
+* added dutch translation nl_NL (46%)
+* added spanish translation es_ES (39%)
+* added spanish translation es_AR (18%)
+* added frensh translation fr_FR (0%)
+* Thanks to all translators at transifex!
+
+= 0.7.5 (2015-07-19) =
+* added support for transifex localization platform
+* added sorting option (see initial_order shortcode option)
+* added relative date format for weeks
+* added import option to set date format in import file
+* several fixes and improvements in truncate function
+* some import improvements
+* set standard import date format to mysql dateformat
+* some speed improvements
+* updated some dates and daterange helptexts and added german translations
+* added finnish translation (thanks to jvesaladesign)
+
+= 0.7.4 (2015-05-16) =
+* fixed allowed daterange for datepicker with custom date formats
+* added option to disable event-list.css
+* added option to set considered daterange for multiday event
+
+= 0.7.3 (2015-05-15) =
+* added csv import functionality
+* added relative and special date selection options for date filter
+* changed required permission to view/edit category admin page
+* added some missing translation functions
+* added some more german translations
+* only allow valid dates (>= 1.1.1970)
+* only load some data on pages where they are required
+
+= 0.7.2 (2015-03-21) =
+* fixed an issue with multiday events when deleting a category
+* fixed displaying the category slug instead of the category name in event listing
+* fixed sub-category handling of deleted categories
+* fixed sub-category handling when a category slug is changed
+* fixed parent selection list in category edit mode
+* some helptext fixes
+
+= 0.7.1 (2015-02-01) =
+* added options for month filterbar item
+* only show years, months and cats with events in filterbar (acc. to available events and date/cat filter
+* fixed event-list feed
+* changed textdomain for translations to event-list
+* some small code and html fixes
+* some code improvements
+
+= 0.7.0 (2014-12-22) =
+* initial multilanguage support
+* German translation (not complete yet)
+* Unicode support in truncate function
+* Changed position of admin menu
+* Changed icon in admin menu
+
+= 0.6.9 (2014-11-09) =
+* added months option in filterbar items
+* added a class for each category slug in each event li element
+* fixed error due to wrong function name when using daterange in date filter
+
+= 0.6.8 (2014-10-14) =
+* added filterbar item "daterange" (to view all, upcoming and past)
+* added options to change feed name and feed description
+* added "Duplicate" and "Add new" button in edit event view
+* corrected embedding of feed (should solve some problems and increase speed)
+* corrected view of event details for single day events
+* changed standard value for feed link in html head to true
+
+= 0.6.7 (2014-06-18) =
+* added month and day support in date_filter
+* added available date and date range formats description in admin about page
+* added support for wpautop in event details
+* added "Past" entry in admin event table filter
+
+= 0.6.6 (2014-06-16) =
+* added date_filter shortcode option
+* added option to change text for filterbar reset item
+* added option "years_order" for years filterbar element
+* preparations to include more date filters / filterbar elements in future versions
+* small css style modification
+* updated some help texts
+
+= 0.6.5 (2014-04-26) =
+* added shortcode attribute "initial_event_id"
+* added an option to only show umpcoming events in the feed
+* fixed a problem in truncate function
 
 = 0.6.4 (2014-02-10) =
 * fixed css file inclusion for shortcodes with parameters
@@ -118,37 +225,31 @@ Additionally the url parameter has changed. So if you are using existing links t
 Also existing widgets must be updated after plugin upgrade. Please visit the widget admin page and press save for all evenlist wigets.
 
 = 0.5.2 (2013-11-09) =
-
 * added number of events in Right Now dashboard widget
 * fixed some css issues
 
 = 0.5.1 (2013-10-27) =
-
 * added site name in eventlist feed name (similar to standard feed captions)
 * fixed not working feed link in header
 * fixed problem with new widget options after upgrade
 * fixed not working permalink for the eventlist feed
 
 = 0.5.0 (2013-10-26) =
-
 * added event feed with a lot of options
 * added widget option for cat filter
 
 = 0.4.5 (2013-08-05) =
-
 * added capability to sync the event categories with the post categories (manually or automatically)
 * fixed problem with empty category list
 * fixed link to category page in new event page
 * fixed indention in in category parent combo box
 
 = 0.4.4 (2013-07-20) =
-
 * added support for sub-categories
 * moved category administration to seperate page
 * improved category sorting
 
 = 0.4.3 (2013-07-05) =
-
 * added possibility to edit existing categories
 * added tooptip texts for the widget option
 * changed css classes to differ between event-list-view and single-event-view
@@ -158,12 +259,10 @@ Also existing widgets must be updated after plugin upgrade. Please visit the wid
 * code improvements and cleanup in admin pages
 
 = 0.4.2 (2013-06-09) =
-
 * fixed links urls to events in eventlist-widget
 * added option to show date only once per day
 
 = 0.4.1 (2013-05-31) =
-
 * fixed deleting of categories
 * fixed url to calendar icon in new/edit event form
 * fixed date format localization in new/edit event form
@@ -172,7 +271,6 @@ Also existing widgets must be updated after plugin upgrade. Please visit the wid
 * small security improvements
 
 = 0.4.0 (2013-05-04) =
-
 * added category support
 * added settings page
 * small changes in add/edit event admin page
@@ -183,7 +281,6 @@ Also existing widgets must be updated after plugin upgrade. Please visit the wid
 * small fixes in widget code
 
 = 0.3.4 (2013-03-16) =
-
 * fixed deleting of events
 * removed link to not available settings page in about page
 * changed parameter values from numbers to a more significant wording
@@ -191,19 +288,16 @@ Also existing widgets must be updated after plugin upgrade. Please visit the wid
 * added shortcode attribute details_length to truncate details
 
 = 0.3.3 (2013-03-01) =
-
 * fixed event creation/modification problem with php versions < 5.3
 * improved truncate of details in admin event table
 
 = 0.3.2 (2013-02-24) =
-
 * removed empty settings page (will be added again when settings are available)
 * fixed view of details in admin event table
 * fixed adding or modifying events with alternative date formats
 * only set time format in output if a known time format was entered
 
 = 0.3.1 (2013-01-03) =
-
 * added widget option "show_location"
 * fixed wrong url for single event page link
 * fixed issue with different shortcodes on one page or post
@@ -213,7 +307,6 @@ Also existing widgets must be updated after plugin upgrade. Please visit the wid
 
 
 = 0.3.0 (2012-12-31) =
-
 * added a widget to show upcoming events in a sidebar
 * added some shortcode attributes to modify the output
 * internal code changes
@@ -221,20 +314,17 @@ Also existing widgets must be updated after plugin upgrade. Please visit the wid
 * updated help texts on admin about page
 
 = 0.2.2 (2012-11-18) =
-
 * localization of date and time on the frontpage
 * changed and localized date and time view in the admin event list table
 * localization of date in the new event form
 
 = 0.2.1 (2012-10-26) =
-
 * changed field order and align in new/edit event form
 * added datepicker for start and end date in new/edit event form
 * improved multiday event selection in new/edit event form
 * small changes in event table on admin page
 
 = 0.2.0 (2012-09-29) =
-
 * adapted menu names to wordpress standard (similar to posts and pages)
 * adapted event list table admin page to wordpress standard layout
 * used wordpress included table view for admin event table
@@ -243,12 +333,10 @@ Also existing widgets must be updated after plugin upgrade. Please visit the wid
 * added status messages for added, modified and deleted events on admin page
 
 = 0.1.1 (2012-09-24) =
-
 * fixed an issue with additional quotes after adding or editing an event
 * fixed saving of wrong date when adding a new event
 * fixed sorting of events when more events are at the same day
 * added validation of data before saving to database
 
 = 0.1.0 (2012-09-08) =
-
 * Initial release

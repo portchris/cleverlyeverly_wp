@@ -1,7 +1,3 @@
-.event-list {
-	clear: both;
-}
-
 ul.event-list-view, ul.single-event-view {
 	list-style: none !important;
 	margin: 1.5em 0 2em 0;
@@ -64,6 +60,10 @@ li.event {
 	padding-bottom: 0.3em;
 }
 
+.event-info {
+	display: block !important;
+}
+
 .multi-day {
 	margin: 0 0 0 7.5em;
 }
@@ -123,4 +123,8 @@ div.filterbar ul.hlist li {
 div.filterbar ul.hlist li + li:before {
 	content: "|";
 	padding: 0 1px;
+}
+
+div.el-hidden {
+	display: none;
 }

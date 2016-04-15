@@ -1,5 +1,5 @@
 <?php
-if(!defined('ABSPATH')) {
+if(!defined('WPINC')) {
 	exit;
 }
 
@@ -80,7 +80,11 @@ class EL_Admin_Main {
 				case 'modified':
 					$this->show_edit_view($this->action);
 					return;
-
+				// actions showing import view
+				case 'import':
+					require_once(EL_PATH.'admin/includes/admin-import.php');
+					EL_Admin_Import::get_instance()->show_import();
+					return;
 				// actions showing event list
 				case 'deleted':
 					// nothing to do
@@ -101,14 +105,17 @@ class EL_Admin_Main {
 
 	private function show_page_header($action, $editview=false) {
 		if($editview) {
-			$header = 'Edit Event';
+			$duplicate_link = add_query_arg(array('id'=>$_GET['id'], 'action'=>'copy'), '?page=el_admin_new');
+			$header = __('Edit Event','event-list').' <a href="'.$duplicate_link.'" class="add-new-h2">'.__('Duplicate','event-list').'</a>';
 		}
 		else {
-			$header = 'Events <a href="?page=el_admin_new" class="add-new-h2">Add New</a>';
+			$header = __('Events','event-list');
 		}
+		$new_link = '<a href="?page=el_admin_new" class="add-new-h2">'.__('Add New','event-list').'</a>';
+		$import_link = $editview ? '' : '<a href="?page=el_admin_main&action=import" class="add-new-h2">'.__('Import','event-list').'</a>';
 		echo '
 			<div class="wrap">
-				<div id="icon-edit-pages" class="icon32"><br /></div><h2>'.$header.'</h2>';
+				<div id="icon-edit-pages" class="icon32"><br /></div><h2>'.$header.' '.$new_link.' '.$import_link.'</h2>';
 		$this->show_message($action);
 	}
 
@@ -197,7 +204,7 @@ class EL_Admin_Main {
 		if(isset($eventdata['sql_end_date']) && '' != $eventdata['sql_end_date']) {
 			$eventdata['end_date'] = $eventdata['sql_end_date'];
 		}
-		return $this->db->update_event($eventdata);
+		return $this->db->update_event($eventdata, true);
 	}
 
 	private function redirect($action=false, $error=false, $query_args=array()) {

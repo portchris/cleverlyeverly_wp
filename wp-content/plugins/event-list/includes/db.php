@@ -1,9 +1,10 @@
 <?php
-if( !defined( 'ABSPATH' ) ) {
+if(!defined('WPINC')) {
 	exit;
 }
 
-require_once( EL_PATH.'includes/options.php' );
+require_once(EL_PATH.'includes/options.php');
+require_once(EL_PATH.'includes/daterange.php');
 
 // Class for database access via wordpress functions
 class EL_Db {
@@ -12,11 +13,12 @@ class EL_Db {
 	private static $instance;
 	private $table;
 	private $options;
+	private $daterange;
 
 	public static function &get_instance() {
 		// Create class instance if required
-		if( !isset( self::$instance ) ) {
-			self::$instance = new EL_Db();
+		if(!isset(self::$instance)) {
+			self::$instance = new self();
 		}
 		// Return class instance
 		return self::$instance;
@@ -26,6 +28,7 @@ class EL_Db {
 		global $wpdb;
 		$this->table = $wpdb->prefix.self::TABLE_NAME;
 		$this->options = &EL_Options::get_instance();
+		$this->daterange = &EL_Daterange::get_instance();
 	}
 
 	// UPDATE DB
@@ -67,26 +70,14 @@ class EL_Db {
 		return $wpdb->get_row( $sql );
 	}
 
-	public function get_event_date( $event ) {
+	public function get_distinct_event_data($search_string, $date_filter, $cat_filter, $order='asc') {
 		global $wpdb;
-		if( $event === 'first' ) {
-			// first year
-			$search_date = 'start_date';
-			$sql = 'SELECT DISTINCT '.$search_date.' FROM '.$this->table.' WHERE '.$search_date.' != "0000-00-00" ORDER BY '.$search_date.' ASC LIMIT 1';
+		$where_string = $this->get_sql_filter_string($date_filter, $cat_filter);
+		if('desc' != $order) {
+			$order = 'asc';   // standard order is ASC
 		}
-		else {
-			// last year
-			$search_date = 'end_date';
-			$sql = 'SELECT DISTINCT '.$search_date.' FROM '.$this->table.' WHERE '.$search_date.' != "0000-00-00" ORDER BY '.$search_date.' DESC LIMIT 1';
-		}
-		$date = $wpdb->get_results($sql, ARRAY_A);
-		if( !empty( $date ) ) {
-			$datestring = substr($date[0][$search_date], 0, 4);
-		}
-		else {
-			$datestring = date('Y', current_time('timestamp'));
-		}
-		return $datestring;
+		$sql = 'SELECT DISTINCT '.$search_string.' as data FROM '.$this->table.' WHERE '.$where_string.' order by data '.$order;
+		return $wpdb->get_results($sql);
 	}
 
 	public function get_num_events() {
@@ -95,7 +86,7 @@ class EL_Db {
 		return $wpdb->get_var($sql);
 	}
 
-	public function update_event($event_data) {
+	public function update_event($event_data, $check_multiday=false) {
 		global $wpdb;
 		// prepare and validate sqldata
 		$sqldata = array();
@@ -111,7 +102,7 @@ class EL_Db {
 		$sqldata['start_date'] = $this->validate_sql_date($event_data['start_date']);
 		if(false === $sqldata['start_date']) { return false; }
 		//end_date
-		if(isset($event_data['multiday']) && "1" === $event_data['multiday']) {
+		if(!$check_multiday || (isset($event_data['multiday']) && "1" === $event_data['multiday'])) {
 			if(!isset($event_data['end_date'])) { $sqldata['end_date'] = $sqldata['start_date']; }
 			$sqldata['end_date'] = $this->validate_sql_date($event_data['end_date']);
 			if(false === $sqldata['end_date']) { $sqldata['end_date'] = $sqldata['start_date']; }
@@ -193,9 +184,9 @@ class EL_Db {
 			// replace slug in categorystring
 			$event['categories'] = str_replace('|'.$old_slug.'|', '|'.$new_slug.'|', $event['categories']);
 			$event['categories'] = explode( '|', substr($event['categories'], 1, -1 ) );
-			$this->update_event( $event );
+			$this->update_event($event);
 		}
-		return count( $affected_events );
+		return count($affected_events);
 	}
 
 	public function count_events( $slug ) {
@@ -206,7 +197,9 @@ class EL_Db {
 
 	private function validate_sql_date($datestring) {
 		$d = date_create_from_format('Y-m-d', $datestring);
-		if($d && $d->format('Y-m-d') == $datestring) {
+		if($d && $d->format('Y-m-d') == $datestring
+		      && 1970 <= $d->format('Y')
+		      && 2999 >= $d->format('Y')) {
 			return $datestring;
 		}
 		return false;
@@ -217,63 +210,66 @@ class EL_Db {
 		// date filter
 		$date_filter=str_replace(' ','',$date_filter);
 		if(null != $date_filter && 'all' != $date_filter && '' != $date_filter) {
-			if(is_numeric($date_filter)) {
-				// get events of a specific year
-				$range_start = $date_filter.'-01-01';
-				$range_end = $date_filter.'-12-31';
-			}
-			elseif('past' === $date_filter) {
-				// get only events in the past
-				$range_start = '0000-01-01';
-				$range_end = date('Y-m-d', current_time('timestamp')-86400); // previous day (86400 seconds = 1*24*60*60 = 1 day))
-			}
-			else {  // upcoming
-				// get only events from today and in the future
-				$range_start = date('Y-m-d', current_time('timestamp'));
-				$range_end = '9999-12-31';
-			}
-			$sql_filter_string .= '(end_date >= "'.$range_start.'" AND start_date <= "'.$range_end.'")';
+			$sql_filter_string .= $this->filter_walker($date_filter, 'sql_date_filter');
 		}
-
 		// cat_filter
 		$cat_filter=str_replace(' ', '', $cat_filter);
 		if(null != $cat_filter && 'all' != $cat_filter && '' != $cat_filter) {
 			if('' != $sql_filter_string) {
 				$sql_filter_string .= ' AND ';
 			}
-			$sql_filter_string .= '(';
-			$delimiters = array('&' => ' AND ',
-			                    '|' => ' OR ',
-			                    ',' => ' OR ',
-			                    '(' => '(',
-			                    ')' => ')');
-			$delimiter_keys = array_keys($delimiters);
-			$tmp_element = '';
-			$len_cat_filter = strlen($cat_filter);
-			for($i=0; $i<$len_cat_filter; $i++) {
-				if(in_array($cat_filter[$i], $delimiter_keys)) {
-					if('' !== $tmp_element) {
-						$sql_filter_string .= 'categories LIKE "%|'.$tmp_element.'|%"';
-						$tmp_element = '';
-					}
-					$sql_filter_string .= $delimiters[$cat_filter[$i]];
-				}
-				else {
-					$tmp_element .= $cat_filter[$i];
-				}
-			}
-			if('' !== $tmp_element) {
-				$sql_filter_string .= 'categories LIKE "%|'.$tmp_element.'|%"';
-			}
-			$sql_filter_string .= ')';
+			$sql_filter_string .= $this->filter_walker($cat_filter, 'sql_cat_filter');
 		}
-
 		// no filter
 		if('' == $sql_filter_string) {
 			$sql_filter_string = '1';   // in SQL "WHERE 1" is used to show all events
 		}
-
 		return $sql_filter_string;
+	}
+
+	private function filter_walker(&$filter_text, $callback) {
+		$delimiters = array('&' => ' AND ',
+		                    '|' => ' OR ',
+		                    ',' => ' OR ',
+		                    '(' => '(',
+		                    ')' => ')');
+		$delimiter_keys = array_keys($delimiters);
+		$element = '';
+		$filter_length = strlen($filter_text);
+		$filter_sql = '(';
+		for($i=0; $i<$filter_length; $i++) {
+			if(in_array($filter_text[$i], $delimiter_keys)) {
+				if('' !== $element) {
+					$filter_sql .= call_user_func(array($this, $callback), $element);
+					$element = '';
+				}
+				$filter_sql .= $delimiters[$filter_text[$i]];
+			}
+			else {
+				$element .= $filter_text[$i];
+			}
+		}
+		if('' !== $element) {
+			$filter_sql .= call_user_func(array($this, $callback), $element);
+		}
+		return $filter_sql.')';
+	}
+
+	private function sql_date_filter($element) {
+		$range = $this->daterange->check_date_format($element);
+		if(null === $range) {
+			$range = $this->daterange->check_daterange_format($element);
+		}
+		if(null === $range) {
+			//set to standard (upcoming)
+			$range = $this->daterange->get_date_range($element, $this->options->daterange_formats['upcoming']);
+		}
+		$date_for_startrange = ('' == $this->options->get('el_multiday_filterrange')) ? 'start_date' : 'end_date';
+		return '('.$date_for_startrange.' >= "'.$range[0].'" AND start_date <= "'.$range[1].'")';
+	}
+
+	private function sql_cat_filter ($element) {
+		return 'categories LIKE "%|'.$element.'|%"';
 	}
 
 	/** ************************************************************************************************************
@@ -285,32 +281,35 @@ class EL_Db {
 	 * @param bool perserve_tags Specifies if html tags should be preserved or if only the text should be shortened
 	 ***************************************************************************************************************/
 	public function truncate($html, $length, $skip=false, $preserve_tags=true) {
-		if(0 >= $length || strlen($html) <= $length || $skip) {
+		mb_internal_encoding("UTF-8");
+		if(0 >= $length || mb_strlen($html) <= $length || $skip) {
 			// do nothing
 			return $html;
 		}
 		elseif(!$preserve_tags) {
 			// only shorten text
-			return substr($html, 0, $length);
+			return mb_substr($html, 0, $length);
 		}
 		else {
 			// truncate with preserving html tags
+			$truncated = false;
 			$printedLength = 0;
 			$position = 0;
 			$tags = array();
 			$out = '';
-			while($printedLength < $length && preg_match('{</?([a-z]+)[^>]*>|&#?[a-zA-Z0-9]+;}', $html, $match, PREG_OFFSET_CAPTURE, $position)) {
+			while($printedLength < $length && $this->mb_preg_match('{</?([a-z]+\d?)[^>]*>|&#?[a-zA-Z0-9]+;}', $html, $match, PREG_OFFSET_CAPTURE, $position)) {
 				list($tag, $tagPosition) = $match[0];
 				// Print text leading up to the tag
-				$str = substr($html, $position, $tagPosition - $position);
-				if($printedLength + strlen($str) > $length) {
-					$out .= substr($str, 0, $length - $printedLength);
+				$str = mb_substr($html, $position, $tagPosition - $position);
+				if($printedLength + mb_strlen($str) > $length) {
+					$out .= mb_substr($str, 0, $length - $printedLength);
 					$printedLength = $length;
+					$truncated = true;
 					break;
 				}
 				$out .= $str;
-				$printedLength += strlen($str);
-				if($tag[0] == '&') {
+				$printedLength += mb_strlen($str);
+				if('&' == $tag[0]) {
 					// Handle the entity
 					$out .= $tag;
 					$printedLength++;
@@ -318,31 +317,32 @@ class EL_Db {
 				else {
 					// Handle the tag
 					$tagName = $match[1][0];
-					if($tag[1] == '/') {
+					if($this->mb_preg_match('{^<[\b]}', $tag)) {
 						// This is a closing tag
 						$openingTag = array_pop($tags);
-						assert($openingTag == $tagName); // check that tags are properly nested
+						// Check for not properly nested tags (for debugging only)
+						//assert($openingTag == $tagName, '----- Tags not properly nested: OpeningTag: '.$openingTag.'; TagName: '.$tagName.' -----');
 						$out .= $tag;
 					}
-					else if($tag[strlen($tag) - 2] == '/') {
+					else if($this->mb_preg_match('{/\s?>$}', $tag)) {
 						// Self-closing tag
 						$out .= $tag;
-				}
+					}
 					else {
-					// Opening tag
+						// Opening tag
 						$out .= $tag;
 						$tags[] = $tagName;
 					}
 				}
 				// Continue after the tag
-				$position = $tagPosition + strlen($tag);
+				$position = $tagPosition + mb_strlen($tag);
 			}
 			// Print any remaining text
-			if($printedLength < $length && $position < strlen($html)) {
-				$out .= substr($html, $position, $length - $printedLength);
+			if($printedLength < $length && $position < mb_strlen($html)) {
+				$out .= mb_substr($html, $position, $length - $printedLength);
 			}
-			// Print "..." if the html is not complete
-			if(strlen($html) != $position) {
+			// Print ellipsis ("...") if the html was truncated
+			if($truncated) {
 				$out .= ' &hellip;';
 			}
 			// Close any open tags.
@@ -352,16 +352,20 @@ class EL_Db {
 			return $out;
 		}
 	}
-}
 
-/* create date_create_from_format (DateTime::createFromFormat) alternative for PHP 5.2
- *
- * This function is only a small implementation of this function with reduced functionality to handle sql dates (format: 2014-01-31)
- */
-if(!function_exists("date_create_from_format")) {
-	function date_create_from_format($dformat, $dvalue) {
-		$d = new DateTime($dvalue);
-		return $d;
+	private function mb_preg_match($ps_pattern, $ps_subject, &$pa_matches=null, $pn_flags=0, $pn_offset=0, $ps_encoding=null) {
+		// WARNING! - All this function does is to correct offsets, nothing else:
+		//(code is independent of PREG_PATTER_ORDER / PREG_SET_ORDER)
+		if(is_null($ps_encoding)) {
+			$ps_encoding = mb_internal_encoding();
+		}
+		$pn_offset = strlen(mb_substr($ps_subject, 0, $pn_offset, $ps_encoding));
+		$out = preg_match($ps_pattern, $ps_subject, $pa_matches, $pn_flags, $pn_offset);
+		if($out && ($pn_flags & PREG_OFFSET_CAPTURE))
+			foreach($pa_matches as &$ha_match) {
+				$ha_match[1] = mb_strlen(substr($ps_subject, 0, $ha_match[1]), $ps_encoding);
+			}
+		return $out;
 	}
 }
 ?>
