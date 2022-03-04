@@ -1,0 +1,23 @@
+###########################
+# cleverlyeverly.co.uk
+###########################
+server {
+    listen ${NODE_PORT};
+    listen [::]:${NODE_PORT};
+    server_name cleverlyeverly.co.uk;
+    return 301 https://www.cleverlyeverly.co.uk$request_uri;
+}
+server {
+    listen ${NODE_PORT};
+    listen [::]:${NODE_PORT};
+    server_name www.cleverlyeverly.co.uk;
+    set $ROOT /home/${USER}/src/;
+    root $ROOT;
+    index index.html;
+    include /etc/nginx/global/upstreams.conf;
+    include /etc/nginx/global/locations.conf;
+    include /etc/nginx/global/static-m1.conf;
+    location / {
+        try_files $uri $uri/ /index.html$is_args$args;
+    }
+}
