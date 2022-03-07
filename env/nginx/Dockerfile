@@ -16,11 +16,9 @@ RUN apk update && \
 		tzdata \
 		certbot
 
-
 # Add the webroot user
 RUN addgroup  -g ${GID} -S ${USER} && \
 	adduser -u ${UID} -S ${USER} -G ${USER}
-
 
 # Configure build
 # ENV DEBIAN_FRONTEND noninteractive

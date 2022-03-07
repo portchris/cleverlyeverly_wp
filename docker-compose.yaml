@@ -1,18 +1,20 @@
-version: '3.1'
+version: "3.8"
 
 services:
 
   ce_nginx:
-    build: ./env/nginx
+    build:
+      context: ./env/nginx
+      dockerfile: Dockerfile
     ports:
       - ${NODE_PORT}:${NODE_PORT}
     expose:
       - 80
       - 443
     env_file:
-      - ./.env
+      - ./env/nginx/.env
     depends_on:
-      - nr_app
+      - ce_app
     tty: true
     volumes:
       - ./src:/home/${USER}/${USER}/src
@@ -23,8 +25,12 @@ services:
       - ./env/nginx/webserver/global:/etc/nginx/global
       - /var/run/docker.sock:/tmp/docker.sock:ro
 
-  nr_app:
-    build: ./env/app
+  ce_app:
+    build:
+      context: ./env/app
+      dockerfile: Dockerfile
+    env_file:
+      - ./env/app/.env
     ports:
       - ${APP_PORT}:${APP_PORT}
     volumes:

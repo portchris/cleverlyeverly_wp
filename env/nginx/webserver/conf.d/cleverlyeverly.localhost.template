@@ -1,13 +1,7 @@
 server {
     listen ${NODE_PORT};
     listen [::]:${NODE_PORT};
-    server_name cleverlyeverly.co.uk;
-    return 301 https://www.cleverlyeverly.co.uk$request_uri;
-}
-server {
-    listen ${NODE_PORT};
-    listen [::]:${NODE_PORT};
-    server_name www.cleverlyeverly.co.uk;
+    server_name cleverlyeverly.localhost;
     set $ROOT /home/${USER}/src/;
     root $ROOT;
     index index.html;
